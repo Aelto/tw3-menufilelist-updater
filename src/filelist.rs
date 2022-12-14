@@ -10,6 +10,7 @@ impl FileList {
       .0
       .iter()
       .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX11)
+      .filter(|&filename| !filename.starts_with(constants::FILE_IGNORE_PREFIX))
       .collect();
 
     FilteredFilelist(filtered_items).to_string()
@@ -20,6 +21,7 @@ impl FileList {
       .0
       .iter()
       .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX12)
+      .filter(|&filename| !filename.starts_with(constants::FILE_IGNORE_PREFIX))
       .collect();
 
     FilteredFilelist(filtered_items).to_string()
