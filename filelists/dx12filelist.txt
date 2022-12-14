@@ -1,0 +1,9 @@
+audio.xml;
+gameplay.xml;
+hidden.xml;
+hud.xml;
+input.xml;
+localization.xml;
+gamma.xml;
+display.xml;
+graphics.xml;
