@@ -29,6 +29,14 @@ fn attempts_updating(dir: PathBuf) -> Result<(), Box<dyn Error>> {
 
   let entries: Vec<String> = entries
     .filter_map(|entry| entry.ok())
+    .filter(|entry| {
+      entry
+        .path()
+        .extension()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        == constants::FILE_EXTENSION
+    })
     .filter_map(|entry| entry.file_name().into_string().ok())
     .map(|filename| filename.trim_matches(';').to_owned())
     .filter(|filename| filename != constants::FILELIST_DX11 && filename != constants::FILELIST_DX12)
