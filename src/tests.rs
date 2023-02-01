@@ -34,8 +34,8 @@ fn test_unfiltered_list() -> std::io::Result<()> {
 }
 
 #[test]
-/// Confirm the listing of files includes all XML files, even those with the `~`
-/// prefix in their name:
+/// Confirm the listing of files includes only the XML files that fit the DX11
+/// filelist. Also test the DX11 list and the DX12 are different.
 fn test_dx11_list() -> std::io::Result<()> {
   use crate::filelist::FilteredFilelist;
   use crate::FileList;
@@ -73,8 +73,8 @@ fn test_dx11_list() -> std::io::Result<()> {
 }
 
 #[test]
-/// Confirm the listing of files includes all XML files, even those with the `~`
-/// prefix in their name:
+/// Confirm the listing of files includes only the XML files that fit the DX12
+/// list. Also test the DX11 list and the DX12 are different.
 fn test_dx12_list() -> std::io::Result<()> {
   use crate::filelist::FilteredFilelist;
   use crate::FileList;
