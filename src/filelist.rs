@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::PathBuf;
 
 use crate::constants;
 
@@ -26,6 +27,34 @@ impl FileList {
 
     FilteredFilelist(filtered_items).to_string()
   }
+
+  pub fn from_directory(dir: &PathBuf) -> std::io::Result<Self> {
+    let entries = std::fs::read_dir(&dir)?;
+
+    #[allow(unused_mut)]
+    let mut entries: Vec<String> = entries
+      .filter_map(|entry| entry.ok())
+      .filter(|entry| {
+        entry
+          .path()
+          .extension()
+          .unwrap_or_default()
+          .to_ascii_lowercase()
+          == constants::FILE_EXTENSION
+      })
+      .filter_map(|entry| entry.file_name().into_string().ok())
+      .map(|filename| filename.trim_matches(';').to_owned())
+      .filter(|filename| {
+        filename != constants::FILELIST_DX11 && filename != constants::FILELIST_DX12
+      })
+      .collect();
+
+    // sort items during tests to ensure comparable results
+    #[cfg(test)]
+    entries.sort();
+
+    Ok(entries.into())
+  }
 }
 
 impl From<Vec<String>> for FileList {
@@ -40,7 +69,19 @@ impl From<Vec<&String>> for FileList {
   }
 }
 
-pub struct FilteredFilelist<'a>(Vec<&'a String>);
+impl AsRef<Vec<String>> for FileList {
+  fn as_ref(&self) -> &Vec<String> {
+    &self.0
+  }
+}
+
+impl AsMut<Vec<String>> for FileList {
+  fn as_mut(&mut self) -> &mut Vec<String> {
+    &mut self.0
+  }
+}
+
+pub struct FilteredFilelist<'a>(pub(crate) Vec<&'a String>);
 
 impl<'a> Display for FilteredFilelist<'a> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

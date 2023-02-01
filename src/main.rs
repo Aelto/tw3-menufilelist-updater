@@ -2,6 +2,7 @@
 
 pub mod constants;
 mod filelist;
+mod tests;
 
 use std::{error::Error, fs, path::PathBuf};
 
@@ -25,24 +26,7 @@ fn attempts_updating(dir: PathBuf) -> Result<(), Box<dyn Error>> {
     return Ok(());
   }
 
-  let entries = std::fs::read_dir(&dir)?;
-
-  let entries: Vec<String> = entries
-    .filter_map(|entry| entry.ok())
-    .filter(|entry| {
-      entry
-        .path()
-        .extension()
-        .unwrap_or_default()
-        .to_ascii_lowercase()
-        == constants::FILE_EXTENSION
-    })
-    .filter_map(|entry| entry.file_name().into_string().ok())
-    .map(|filename| filename.trim_matches(';').to_owned())
-    .filter(|filename| filename != constants::FILELIST_DX11 && filename != constants::FILELIST_DX12)
-    .collect();
-
-  let filelist: FileList = entries.into();
+  let filelist = FileList::from_directory(&dir)?;
 
   let dx11_output = dir.join(constants::FILELIST_DX11);
   if dx11_output.exists() {
