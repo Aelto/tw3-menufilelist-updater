@@ -1,2 +1,4 @@
 /target
 ./*.txt
+flamegraph.svg
+release
