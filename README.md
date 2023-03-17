@@ -14,9 +14,9 @@ The binary can be placed in either the Witcher 3 game directory or in the `bin/c
 Running the binary will then cause it to list all the files in the filelists' directory and update them accordingly.
 
 ## ASI loader
-> Technical explanation: the ASI laoder hooks itself to the game and runs all of the `.asi` libraries in the same directory as the witcher3.exe. ASI libraries are simple `.dll` files that were renamed to `.asi`.
+> Technical explanation: the ASI loader hooks itself to the game and runs all of the `.asi` libraries in the same directory as the witcher3.exe. ASI libraries are simple `.dll` files that were renamed to `.asi`.
 
-If you wish to run automatically every time you launch the game then you use the [ASI loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) and the
+If you wish to run the tool automatically every time you launch the game then you can use the [ASI loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) and the
 ASI filelist updater library. The tool being pretty fast (benchmarked at at ~500ns per iteration)
 you won't notice the difference and will always get updated filelists.
 
