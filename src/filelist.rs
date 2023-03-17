@@ -1,7 +1,47 @@
+use std::error::Error;
 use std::fmt::Display;
+use std::fs;
 use std::path::PathBuf;
 
 use crate::constants;
+
+pub fn attempts_updating(dir: PathBuf) -> Result<(), Box<dyn Error>> {
+  #[cfg(debug_assertions)]
+  println!("updating filelist.txt in {dir:?}");
+
+  if !dir.exists() {
+    #[cfg(debug_assertions)]
+    println!(" - directory not found, skipping");
+
+    return Ok(());
+  }
+
+  let filelist = FileList::from_directory(&dir)?;
+
+  let dx11_output = dir.join(constants::FILELIST_DX11);
+  if dx11_output.exists() {
+    #[cfg(not(debug_assertions))]
+    let dx11_content = filelist.into_dx11_only_filelist();
+
+    #[cfg(debug_assertions)]
+    let dx11_content = dbg!(filelist.into_dx11_only_filelist());
+
+    fs::write(dx11_output, dx11_content)?;
+  }
+
+  let dx12_output = dir.join(constants::FILELIST_DX12);
+  if dx12_output.exists() {
+    #[cfg(not(debug_assertions))]
+    let dx12_content = filelist.into_dx12_only_filelist();
+
+    #[cfg(debug_assertions)]
+    let dx12_content = dbg!(filelist.into_dx12_only_filelist());
+
+    fs::write(dx12_output, dx12_content)?;
+  }
+
+  Ok(())
+}
 
 pub struct FileList(Vec<String>);
 

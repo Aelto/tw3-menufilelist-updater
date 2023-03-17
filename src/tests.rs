@@ -2,7 +2,7 @@
 /// Confirm the listing of files includes all XML files, even those with the `~`
 /// prefix in their name:
 fn test_unfiltered_list() -> std::io::Result<()> {
-  use crate::FileList;
+  use crate::filelist::FileList;
 
   let mut filelist = FileList::from_directory(&"./bin/config/r4game/user_config_matrix/pc".into())?;
 
@@ -37,8 +37,8 @@ fn test_unfiltered_list() -> std::io::Result<()> {
 /// Confirm the listing of files includes only the XML files that fit the DX11
 /// filelist. Also test the DX11 list and the DX12 are different.
 fn test_dx11_list() -> std::io::Result<()> {
+  use crate::filelist::FileList;
   use crate::filelist::FilteredFilelist;
-  use crate::FileList;
 
   let filelist = FileList::from_directory(&"./bin/config/r4game/user_config_matrix/pc".into())?;
 
@@ -76,8 +76,8 @@ fn test_dx11_list() -> std::io::Result<()> {
 /// Confirm the listing of files includes only the XML files that fit the DX12
 /// list. Also test the DX11 list and the DX12 are different.
 fn test_dx12_list() -> std::io::Result<()> {
+  use crate::filelist::FileList;
   use crate::filelist::FilteredFilelist;
-  use crate::FileList;
 
   let filelist = FileList::from_directory(&"./bin/config/r4game/user_config_matrix/pc".into())?;
 
@@ -107,6 +107,15 @@ fn test_dx12_list() -> std::io::Result<()> {
   assert_ne!(dx11_list, expected.to_string());
 
   assert_ne!(dx11_list, dx12_list);
+
+  Ok(())
+}
+
+extern crate test;
+
+#[bench]
+fn bench_attempt(b: &mut test::Bencher) -> std::io::Result<()> {
+  b.iter(|| crate::attempts_updating("./bin/config/r4game/user_config_matrix/pc".into()));
 
   Ok(())
 }
