@@ -21,24 +21,36 @@ impl Summary {
     self.dx11.is_none() && self.dx12.is_none()
   }
 
+  pub fn is_partial(&self) -> bool {
+    self.dx11.is_some() != self.dx12.is_some() && !self.is_empty()
+  }
+
   pub fn lines(&self) -> usize {
     self.dx11.as_ref().map(|d| d.lines()).unwrap_or_default()
       + self.dx12.as_ref().map(|d| d.lines()).unwrap_or_default()
   }
 
   pub fn render(&mut self, ui: &mut Ui) {
-    if let Some(diff) = &mut self.dx11 {
-      ui.label("DX11");
-      diff.render(ui);
+    ui.label("DX11");
+    match &mut self.dx11 {
+      Some(diff) => {
+        diff.render(ui);
+      }
+      None => {
+        ui.label("missing and/or not updated");
+      }
     }
 
-    if let Some(diff) = &mut self.dx12 {
-      if self.dx11.is_some() {
-        ui.separator();
-      }
+    ui.separator();
+    ui.label("DX12");
 
-      ui.label("DX12");
-      diff.render(ui);
+    match &mut self.dx12 {
+      Some(diff) => {
+        diff.render(ui);
+      }
+      None => {
+        ui.label("missing and/or not updated");
+      }
     }
   }
 }
@@ -115,7 +127,11 @@ struct App {
 impl App {
   fn render_summary(&mut self, ui: &mut Ui) {
     ui.vertical_centered(|ui| {
-      ui.label("Filelists successfully updated");
+      match self.summary.is_partial() {
+        true => ui.label("Filelists partially updated"),
+        false => ui.label("Filelists successfully updated"),
+      };
+
       ui.separator();
 
       self.summary.render(ui);
