@@ -4,23 +4,79 @@ use crate::error::FilelistError;
 
 #[derive(Default)]
 pub struct Summary {
-  pub old_content: String,
-  pub new_content: String,
+  dx11: Option<ContentDiff>,
+  dx12: Option<ContentDiff>,
+}
+
+impl Summary {
+  pub fn set_dx11_diff(&mut self, old: String, new: String) {
+    self.dx11 = Some(ContentDiff { old, new });
+  }
+
+  pub fn set_dx12_diff(&mut self, old: String, new: String) {
+    self.dx12 = Some(ContentDiff { old, new });
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.dx11.is_none() && self.dx12.is_none()
+  }
+
+  pub fn lines(&self) -> usize {
+    self.dx11.as_ref().map(|d| d.lines()).unwrap_or_default()
+      + self.dx12.as_ref().map(|d| d.lines()).unwrap_or_default()
+  }
+
+  pub fn render(&mut self, ui: &mut Ui) {
+    if let Some(diff) = &mut self.dx11 {
+      ui.label("DX11");
+      diff.render(ui);
+    }
+
+    if let Some(diff) = &mut self.dx12 {
+      if self.dx11.is_some() {
+        ui.separator();
+      }
+
+      ui.label("DX12");
+      diff.render(ui);
+    }
+  }
+}
+
+struct ContentDiff {
+  old: String,
+  new: String,
+}
+
+impl ContentDiff {
+  pub fn lines(&self) -> usize {
+    self.new.lines().count().max(self.old.lines().count())
+  }
+
+  pub fn render(&mut self, ui: &mut Ui) {
+    ui.columns(2, |columns| {
+      columns[0].vertical_centered(|ui| {
+        ui.label("BEFORE");
+        ui.text_edit_multiline(&mut self.old);
+      });
+
+      columns[1].vertical_centered(|ui| {
+        ui.label("AFTER");
+        ui.text_edit_multiline(&mut self.new);
+      });
+    });
+  }
 }
 
 pub fn display_summary(summary: Summary, errors: Vec<FilelistError>) {
-  let lines_count: f32 = usize::max(
-    summary.new_content.lines().count(),
-    summary.old_content.lines().count(),
-  )
-  .max(errors.len()) as f32;
+  let lines_count: f32 = summary.lines().max(errors.len()) as f32;
 
   let width = if errors.is_empty() { 320.0 } else { 640.0 };
   let icon = include_bytes!("../../icon.png");
   let icon = eframe::icon_data::from_png_bytes(icon);
 
   let mut viewport =
-    egui::ViewportBuilder::default().with_inner_size([width, 60.0 + lines_count * 18.0]);
+    egui::ViewportBuilder::default().with_inner_size([width, 90.0 + lines_count * 18.0]);
 
   if let Ok(icon) = icon {
     viewport = viewport.with_icon(icon);
@@ -31,24 +87,6 @@ pub fn display_summary(summary: Summary, errors: Vec<FilelistError>) {
 
     ..Default::default()
   };
-
-  // eframe::WindowBuilder::new()
-  //   .with_inner_size([width, 60.0 + lines_count * 18.0])
-  //   .build(window_target)
-
-  // let icon = {
-  //   let (icon_rgba, icon_width, icon_height) = {
-  //     let icon = include_bytes!("../../icon.png");
-  //     let image = image::load_from_memory(icon)
-  //       .expect("Failed to open icon path")
-  //       .into_rgba8();
-  //     let (width, height) = image.dimensions();
-  //     let rgba = image.into_raw();
-  //     (rgba, width, height)
-  //   };
-
-  //   Some( Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to open icon"))
-  // };
 
   eframe::run_native(
     "tw3-menufilelist-updater",
@@ -77,20 +115,10 @@ struct App {
 impl App {
   fn render_summary(&mut self, ui: &mut Ui) {
     ui.vertical_centered(|ui| {
-      ui.label("Filelists updated");
+      ui.label("Filelists successfully updated");
       ui.separator();
 
-      ui.columns(2, |columns| {
-        columns[0].vertical_centered(|ui| {
-          ui.label("BEFORE");
-          ui.text_edit_multiline(&mut self.summary.old_content);
-        });
-
-        columns[1].vertical_centered(|ui| {
-          ui.label("AFTER");
-          ui.text_edit_multiline(&mut self.summary.new_content);
-        });
-      });
+      self.summary.render(ui);
     });
   }
 

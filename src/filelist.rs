@@ -25,7 +25,7 @@ pub fn attempts_updating(dir: PathBuf) -> Result<(), FilelistError> {
   // - a summary is built once, only where the current value is None even if
   //   both dx11 & dx12 filelists are updated
   let mut errors = Vec::new();
-  let mut summary: Option<Summary> = None;
+  let mut summary = Summary::default();
 
   let Some(filelist) = crate::error::handle(&mut errors, FileList::from_directory(&dir)) else {
     return Ok(());
@@ -33,39 +33,27 @@ pub fn attempts_updating(dir: PathBuf) -> Result<(), FilelistError> {
 
   if dx11_exists {
     let dx11_content = filelist.to_dx11_only_filelist();
-
     let old_content = crate::error::handle(&mut errors, std::fs::read_to_string(&dx11_output));
 
     crate::error::handle(&mut errors, std::fs::write(dx11_output, &dx11_content));
 
     if let Some(old_content) = old_content {
-      summary = Some(Summary {
-        new_content: dx11_content,
-        old_content,
-      });
+      summary.set_dx11_diff(old_content, dx11_content);
     }
   }
 
   if dx12_exists {
     let dx12_content = filelist.to_dx12_only_filelist();
-
-    // the old content is only fetched if a summary is needed
-    let old_content = match summary.is_none() {
-      true => crate::error::handle(&mut errors, std::fs::read_to_string(&dx12_output)),
-      false => None,
-    };
+    let old_content = crate::error::handle(&mut errors, std::fs::read_to_string(&dx12_output));
 
     crate::error::handle(&mut errors, std::fs::write(dx12_output, &dx12_content));
 
     if let Some(old_content) = old_content {
-      summary = Some(Summary {
-        new_content: dx12_content,
-        old_content,
-      });
+      summary.set_dx12_diff(old_content, dx12_content);
     }
   }
 
-  if let Some(summary) = summary {
+  if !summary.is_empty() {
     crate::summary::display_summary(summary, errors);
   }
 
