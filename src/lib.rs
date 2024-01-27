@@ -1,12 +1,16 @@
 pub mod constants;
+pub mod error;
 pub mod filelist;
+
+#[cfg(feature = "summary")]
+pub mod summary;
 
 use std::path::Path;
 
 use filelist::attempts_updating;
 
 #[no_mangle] // needs to precede every function that is called from c
-extern "stdcall" fn DllMain(a: *const u8, b: u32, c: *const u8) -> u32 {
+extern "stdcall" fn DllMain(_a: *const u8, b: u32, _c: *const u8) -> u32 {
   // the program is launched  multiple times, once for the launcher and once
   // for the actual game.
   let _is_launcher = b == 0;

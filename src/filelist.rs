@@ -1,71 +1,93 @@
-use std::error::Error;
-use std::fmt::Display;
-use std::fs;
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use crate::constants;
+use crate::error::FilelistError;
+use crate::summary::Summary;
 
-pub fn attempts_updating(dir: PathBuf) -> Result<(), Box<dyn Error>> {
-  #[cfg(debug_assertions)]
-  println!("updating filelist.txt in {dir:?}");
-
+pub fn attempts_updating(dir: PathBuf) -> Result<(), FilelistError> {
   if !dir.exists() {
-    #[cfg(debug_assertions)]
-    println!(" - directory not found, skipping");
-
-    return Ok(());
+    return Err(FilelistError::FilelistDirectoryNotFound(dir));
   }
-
-  let filelist = FileList::from_directory(&dir)?;
 
   let dx11_output = dir.join(constants::FILELIST_DX11);
-  if dx11_output.exists() {
-    #[cfg(not(debug_assertions))]
-    let dx11_content = filelist.into_dx11_only_filelist();
+  let dx12_output = dir.join(constants::FILELIST_DX12);
+  let dx11_exists = dx11_output.exists();
+  let dx12_exists = dx12_output.exists();
 
-    #[cfg(debug_assertions)]
-    let dx11_content = dbg!(filelist.into_dx11_only_filelist());
-
-    fs::write(dx11_output, dx11_content)?;
+  if !dx11_exists && !dx12_exists {
+    return Err(FilelistError::FilelistDirectoryNotFound(dir));
   }
 
-  let dx12_output = dir.join(constants::FILELIST_DX12);
-  if dx12_output.exists() {
-    #[cfg(not(debug_assertions))]
-    let dx12_content = filelist.into_dx12_only_filelist();
+  // mutable "stores" that are filled as we construct the filelists,
+  // - errors may accumulate as we progress due to various reasons, incorrect
+  //   path, file locks etc...
+  // - a summary is built once, only where the current value is None even if
+  //   both dx11 & dx12 filelists are updated
+  let mut errors = Vec::new();
+  let mut summary: Option<Summary> = None;
 
-    #[cfg(debug_assertions)]
-    let dx12_content = dbg!(filelist.into_dx12_only_filelist());
+  let Some(filelist) = crate::error::handle(&mut errors, FileList::from_directory(&dir)) else {
+    return Ok(());
+  };
 
-    fs::write(dx12_output, dx12_content)?;
+  if dx11_exists {
+    let dx11_content = filelist.to_dx11_only_filelist();
+
+    let old_content = crate::error::handle(&mut errors, std::fs::read_to_string(&dx11_output));
+
+    crate::error::handle(&mut errors, std::fs::write(dx11_output, &dx11_content));
+
+    if let Some(old_content) = old_content {
+      summary = Some(Summary {
+        new_content: dx11_content,
+        old_content,
+      });
+    }
+  }
+
+  if dx12_exists {
+    let dx12_content = filelist.to_dx12_only_filelist();
+
+    // the old content is only fetched if a summary is needed
+    let old_content = match summary.is_none() {
+      true => crate::error::handle(&mut errors, std::fs::read_to_string(&dx12_output)),
+      false => None,
+    };
+
+    crate::error::handle(&mut errors, std::fs::write(dx12_output, &dx12_content));
+
+    if let Some(old_content) = old_content {
+      summary = Some(Summary {
+        new_content: dx12_content,
+        old_content,
+      });
+    }
+  }
+
+  if let Some(summary) = summary {
+    crate::summary::display_summary(summary, errors);
   }
 
   Ok(())
 }
 
-pub struct FileList(Vec<String>);
+pub struct FileList {
+  pub menus: Vec<String>,
+}
 
 impl FileList {
-  pub fn into_dx12_only_filelist(&self) -> String {
-    let filtered_items: Vec<&String> = self
-      .0
-      .iter()
-      .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX11)
-      .filter(|&filename| !filename.starts_with(constants::FILE_IGNORE_PREFIX))
-      .collect();
+  #[cfg(test)]
+  pub fn new(mut menus: Vec<String>) -> Self {
+    // sort items during tests to ensure comparable results
+    menus.sort();
 
-    FilteredFilelist(filtered_items).to_string()
+    Self { menus }
   }
 
-  pub fn into_dx11_only_filelist(&self) -> String {
-    let filtered_items: Vec<&String> = self
-      .0
-      .iter()
-      .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX12)
-      .filter(|&filename| !filename.starts_with(constants::FILE_IGNORE_PREFIX))
-      .collect();
-
-    FilteredFilelist(filtered_items).to_string()
+  #[cfg(not(test))]
+  pub fn new(menus: Vec<String>) -> Self {
+    Self { menus }
   }
 
   pub fn from_directory(dir: &PathBuf) -> std::io::Result<Self> {
@@ -93,42 +115,64 @@ impl FileList {
     #[cfg(test)]
     entries.sort();
 
-    Ok(entries.into())
+    Ok(Self::new(entries))
   }
-}
 
-impl From<Vec<String>> for FileList {
-  fn from(value: Vec<String>) -> Self {
-    Self(value)
+  pub fn raw_entries(&self) -> impl Iterator<Item = &str> {
+    self.menus.iter().map(|s| s.deref())
   }
-}
 
-impl From<Vec<&String>> for FileList {
-  fn from(value: Vec<&String>) -> Self {
-    Self(value.into_iter().map(|s| s.to_owned()).collect())
+  fn entries(&self) -> impl Iterator<Item = &str> {
+    self
+      .raw_entries()
+      .filter(|filename| !filename.starts_with(constants::FILE_IGNORE_PREFIX))
+  }
+
+  pub fn dx11_entries(&self) -> impl Iterator<Item = &str> {
+    self
+      .entries()
+      .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX12)
+  }
+
+  pub fn dx12_entries(&self) -> impl Iterator<Item = &str> {
+    self
+      .entries()
+      .filter(|&filename| filename != constants::FILELIST_LAST_VANILLA_MENU_DX11)
+  }
+
+  pub fn to_dx12_only_filelist(&self) -> String {
+    let mut out = String::new();
+
+    for entry in self.dx12_entries() {
+      out.push_str(entry);
+      out.push(';');
+      out.push('\n');
+    }
+
+    out
+  }
+
+  pub fn to_dx11_only_filelist(&self) -> String {
+    let mut out = String::new();
+
+    for entry in self.dx11_entries() {
+      out.push_str(entry);
+      out.push(';');
+      out.push('\n');
+    }
+
+    out
   }
 }
 
 impl AsRef<Vec<String>> for FileList {
   fn as_ref(&self) -> &Vec<String> {
-    &self.0
+    &self.menus
   }
 }
 
 impl AsMut<Vec<String>> for FileList {
   fn as_mut(&mut self) -> &mut Vec<String> {
-    &mut self.0
-  }
-}
-
-pub struct FilteredFilelist<'a>(pub(crate) Vec<&'a String>);
-
-impl<'a> Display for FilteredFilelist<'a> {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    for filename in &self.0 {
-      writeln!(f, "{filename};")?;
-    }
-
-    Ok(())
+    &mut self.menus
   }
 }

@@ -38,12 +38,11 @@ fn test_unfiltered_list() -> std::io::Result<()> {
 /// filelist. Also test the DX11 list and the DX12 are different.
 fn test_dx11_list() -> std::io::Result<()> {
   use crate::filelist::FileList;
-  use crate::filelist::FilteredFilelist;
 
   let filelist = FileList::from_directory(&"./bin/config/r4game/user_config_matrix/pc".into())?;
 
   // keeping the items commented to know exactly what should be filtered out:
-  let mut files = vec![
+  let expected = FileList::new(vec![
     // "~ignore_test.xml",
     "audio.xml".to_owned(),
     "display.xml".to_owned(),
@@ -56,18 +55,22 @@ fn test_dx11_list() -> std::io::Result<()> {
     "input.xml".to_owned(),
     "localization.xml".to_owned(),
     "test.xml".to_owned(),
-  ];
-  files.sort();
+  ]);
 
-  let expected: FilteredFilelist = FilteredFilelist(files.iter().collect());
+  assert_eq!(
+    expected.to_dx11_only_filelist(),
+    filelist.to_dx11_only_filelist()
+  );
 
-  let dx11_list = filelist.into_dx11_only_filelist();
-  assert_eq!(dx11_list, expected.to_string());
+  assert_ne!(
+    expected.to_dx11_only_filelist(),
+    filelist.to_dx12_only_filelist()
+  );
 
-  let dx12_list = filelist.into_dx12_only_filelist();
-  assert_ne!(dx12_list, expected.to_string());
-
-  assert_ne!(dx11_list, dx12_list);
+  assert_ne!(
+    expected.to_dx11_only_filelist(),
+    expected.to_dx12_only_filelist()
+  );
 
   Ok(())
 }
@@ -77,12 +80,11 @@ fn test_dx11_list() -> std::io::Result<()> {
 /// list. Also test the DX11 list and the DX12 are different.
 fn test_dx12_list() -> std::io::Result<()> {
   use crate::filelist::FileList;
-  use crate::filelist::FilteredFilelist;
 
   let filelist = FileList::from_directory(&"./bin/config/r4game/user_config_matrix/pc".into())?;
 
   // keeping the items commented to know exactly what should be filtered out:
-  let mut files = vec![
+  let expected = FileList::new(vec![
     // "~ignore_test.xml",
     "audio.xml".to_owned(),
     "display.xml".to_owned(),
@@ -95,27 +97,24 @@ fn test_dx12_list() -> std::io::Result<()> {
     "input.xml".to_owned(),
     "localization.xml".to_owned(),
     "test.xml".to_owned(),
-  ];
-  files.sort();
+  ]);
 
-  let expected: FilteredFilelist = FilteredFilelist(files.iter().collect());
+  assert_eq!(
+    expected.to_dx12_only_filelist(),
+    filelist.to_dx12_only_filelist()
+  );
 
-  let dx12_list = filelist.into_dx12_only_filelist();
-  assert_eq!(dx12_list, expected.to_string());
+  assert_ne!(
+    expected.to_dx12_only_filelist(),
+    filelist.to_dx11_only_filelist()
+  );
 
-  let dx11_list = filelist.into_dx11_only_filelist();
-  assert_ne!(dx11_list, expected.to_string());
-
-  assert_ne!(dx11_list, dx12_list);
+  assert_ne!(
+    expected.to_dx11_only_filelist(),
+    expected.to_dx12_only_filelist()
+  );
 
   Ok(())
 }
 
 extern crate test;
-
-#[bench]
-fn bench_attempt(b: &mut test::Bencher) -> std::io::Result<()> {
-  b.iter(|| crate::attempts_updating("./bin/config/r4game/user_config_matrix/pc".into()));
-
-  Ok(())
-}
