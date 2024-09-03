@@ -13,5 +13,5 @@ summary = ["dep:eframe"]
 #crate-type = ["cdylib"]
 
 [dependencies]
-eframe = { version = "0.24.0", optional = true }
+eframe = { version = "^0.28.0", optional = true }
 image = "0.24.8" # for the icon
