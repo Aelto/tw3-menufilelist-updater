@@ -110,10 +110,10 @@ pub fn display_summary(summary: Summary, errors: Vec<FilelistError>) {
       };
       creation_context.egui_ctx.set_style(style);
 
-      Box::<App>::new(App {
+      Ok(Box::<App>::new(App {
         summary,
         errors: errors.into_iter().map(|e| e.to_string()).collect(),
-      })
+      }))
     }),
   )
   .expect("Unable to open native GUI window");
