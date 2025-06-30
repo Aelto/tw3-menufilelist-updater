@@ -2,6 +2,8 @@
 The nextgen version of the game introduced a filelist file the user must update for a menu XML file to appear in game. Since manually editing the files may be cumbersome, this utility can do it for you
 while still making sure the DX11 file contains only the DX11 files.
 
+![GUI app image](docs/image.webp)
+
 # Downloading
  - The latest windows executable is available at this [direct download link](https://github.com/Aelto/tw3-menufilelist-updater/releases/latest/download/tw3-menufilelist-updater.exe)
  - Older versions are available in the [releases](https://github.com/Aelto/tw3-menufilelist-updater/releases) tab
